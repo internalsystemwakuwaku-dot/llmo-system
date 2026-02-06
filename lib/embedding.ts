@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Gemini embedding-001の次元数
-export const EMBEDDING_DIMENSIONS = 768;
+// Gemini gemini-embedding-001の次元数
+export const EMBEDDING_DIMENSIONS = 3072;
 
 // Gemini APIを使用してテキストをベクトル化
 export async function embedText(text: string): Promise<number[]> {
@@ -16,7 +16,7 @@ export async function embedText(text: string): Promise<number[]> {
   const truncatedText = text.length > maxLength ? text.slice(0, maxLength) : text;
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "embedding-001" });
+  const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
 
   const result = await model.embedContent(truncatedText);
   return result.embedding.values;

@@ -12,7 +12,7 @@ async function recreateTable() {
   console.log("🗑️ Dropping old table...");
   await client.execute("DROP TABLE IF EXISTS analysis_logs");
 
-  console.log("📦 Creating new table with 768 dimensions (Gemini embedding-001)...");
+  console.log("📦 Creating new table with 3072 dimensions (gemini-embedding-001)...");
   await client.execute(`
     CREATE TABLE analysis_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,8 +21,8 @@ async function recreateTable() {
       page_title TEXT,
       content_preview TEXT,
       similarity_score REAL,
-      content_embedding F32_BLOB(768),
-      query_embedding F32_BLOB(768),
+      content_embedding F32_BLOB(3072),
+      query_embedding F32_BLOB(3072),
       advice TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
