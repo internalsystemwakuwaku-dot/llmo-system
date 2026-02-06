@@ -1,5 +1,4 @@
 import { google } from "@ai-sdk/google";
-import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { ScrapedContent } from "./scraper";
 
@@ -21,26 +20,22 @@ export interface AnalysisResult {
   summary: string;
 }
 
-// 使用するLLMモデルを取得
-function getModel() {
-  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return google("gemini-2.0-flash");
-  }
-  if (process.env.OPENAI_API_KEY) {
-    return openai("gpt-4o-mini");
-  }
-  throw new Error("No LLM provider configured");
-}
+// 利用可能なGeminiモデルのリスト（優先度順）
+const GEMINI_MODELS = [
+  "gemini-2.0-flash",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-2.0-flash-001",
+  "gemini-2.5-pro",
+];
 
-// LLMでコンテンツを分析
-export async function analyzeContent(
+// プロンプトを生成
+function createPrompt(
   content: ScrapedContent,
   targetQuery: string,
   similarityScore: number
-): Promise<AnalysisResult> {
-  const model = getModel();
-
-  const prompt = `あなたはLLMO（大規模言語モデル最適化）の専門家です。
+): string {
+  return `あなたはLLMO（大規模言語モデル最適化）の専門家です。
 以下のWebページコンテンツを分析し、AI検索（RAG）においてどれくらい参照されやすいかを評価してください。
 
 【ターゲット質問】
@@ -86,46 +81,91 @@ ${Math.round(similarityScore * 100)}%
   ],
   "summary": "総評（日本語で3-4文）"
 }`;
+}
 
-  const { text } = await generateText({
-    model,
-    prompt,
-    temperature: 0.3,
-  });
+// クォータ超過エラーかどうかを判定
+function isQuotaError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes("quota") ||
+      message.includes("rate limit") ||
+      message.includes("resource_exhausted") ||
+      message.includes("429")
+    );
+  }
+  return false;
+}
 
-  // JSONを抽出してパース
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("Failed to parse LLM response as JSON");
+// LLMでコンテンツを分析（モデル自動フォールバック付き）
+export async function analyzeContent(
+  content: ScrapedContent,
+  targetQuery: string,
+  similarityScore: number
+): Promise<AnalysisResult> {
+  const prompt = createPrompt(content, targetQuery, similarityScore);
+  let lastError: Error | null = null;
+
+  // 各モデルを順番に試行
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      console.log(`[LLMO] Trying model: ${modelName}`);
+      const model = google(modelName);
+
+      const { text } = await generateText({
+        model,
+        prompt,
+        temperature: 0.3,
+      });
+
+      // JSONを抽出してパース
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("Failed to parse LLM response as JSON");
+      }
+
+      const result = JSON.parse(jsonMatch[0]) as AnalysisResult;
+      console.log(`[LLMO] Successfully analyzed with model: ${modelName}`);
+      return result;
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(`[LLMO] Model ${modelName} failed:`, (error as Error).message.slice(0, 100));
+
+      // クォータ超過エラーの場合は次のモデルを試行
+      if (isQuotaError(error)) {
+        console.log(`[LLMO] Quota exceeded for ${modelName}, trying next model...`);
+        continue;
+      }
+
+      // モデルが見つからないエラーの場合も次を試行
+      if ((error as Error).message.includes("not found") || (error as Error).message.includes("NOT_FOUND")) {
+        console.log(`[LLMO] Model ${modelName} not found, trying next model...`);
+        continue;
+      }
+
+      // その他のエラーは再スロー
+      throw error;
+    }
   }
 
-  try {
-    const result = JSON.parse(jsonMatch[0]) as AnalysisResult;
-    return result;
-  } catch {
-    throw new Error("Failed to parse LLM response as JSON");
-  }
+  // 全モデルが失敗した場合
+  throw lastError || new Error("All Gemini models failed");
 }
 
 // 簡易スコア計算（LLMを使わない場合のフォールバック）
 export function calculateBasicScore(content: ScrapedContent, similarityScore: number): AnalysisResult {
-  let overallScore = Math.round(similarityScore * 50) + 25; // 類似度をベースに
+  let overallScore = Math.round(similarityScore * 50) + 25;
 
-  // 見出しの数
   let structuredScore = 40;
   if (content.headings.length >= 5) structuredScore = 70;
   else if (content.headings.length >= 3) structuredScore = 55;
-
-  // 構造化データ
   if (content.hasStructuredData) structuredScore += 20;
 
-  // コンテンツの長さ
   let comprehensivenessScore = 40;
   if (content.wordCount >= 2000) comprehensivenessScore = 70;
   else if (content.wordCount >= 1000) comprehensivenessScore = 55;
   else if (content.wordCount >= 500) comprehensivenessScore = 45;
 
-  // 説明の有無
   let primaryScore = 50;
   if (content.description && content.description.length > 50) primaryScore = 60;
 
@@ -154,7 +194,7 @@ export function calculateBasicScore(content: ScrapedContent, similarityScore: nu
   };
 }
 
-// LLM分析を試行し、失敗した場合はフォールバック
+// LLM分析を試行し、全モデル失敗時はフォールバック
 export async function analyzeContentWithFallback(
   content: ScrapedContent,
   targetQuery: string,
@@ -163,7 +203,7 @@ export async function analyzeContentWithFallback(
   try {
     return await analyzeContent(content, targetQuery, similarityScore);
   } catch (error) {
-    console.warn("[LLMO] LLM analysis failed, using fallback:", error);
+    console.warn("[LLMO] All LLM models failed, using basic analysis:", (error as Error).message);
     return calculateBasicScore(content, similarityScore);
   }
 }
