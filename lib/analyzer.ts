@@ -24,7 +24,7 @@ export interface AnalysisResult {
 // 使用するLLMモデルを取得
 function getModel() {
   if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return google("gemini-1.5-flash");
+    return google("gemini-2.0-flash");
   }
   if (process.env.OPENAI_API_KEY) {
     return openai("gpt-4o-mini");
