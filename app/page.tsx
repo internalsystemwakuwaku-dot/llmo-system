@@ -7,6 +7,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   TrendingUp,
   FileText,
   Database,
@@ -211,6 +212,20 @@ function ResultDisplay({ result }: { result: DiagnosisResult }) {
           </div>
         </div>
       </div>
+
+      {/* SPA警告 */}
+      {data.isSPA && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-medium text-amber-800">JavaScriptレンダリングサイトです</h3>
+            <p className="text-amber-700 text-sm mt-1">
+              このサイトはJavaScriptで動的にコンテンツを生成しています。
+              メタ情報やOGPタグから取得できた情報のみで診断しているため、実際のページ内容と異なる場合があります。
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 詳細スコア */}
       <div>

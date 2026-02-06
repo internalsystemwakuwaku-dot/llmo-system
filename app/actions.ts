@@ -27,6 +27,7 @@ export interface DiagnosisResult {
     similarityPercentage: number;
     analysis: AnalysisResult;
     scrapedAt: string;
+    isSPA: boolean;
   };
 }
 
@@ -56,10 +57,17 @@ export async function diagnoseUrl(
     console.log(`[LLMO] Scraping URL: ${url}`);
     const scrapedContent = await scrapeUrl(url);
 
-    if (!scrapedContent.mainContent || scrapedContent.mainContent.length < 100) {
+    console.log(`[LLMO] Scraped content length: ${scrapedContent.mainContent.length}, isSPA: ${scrapedContent.isSPA}`);
+
+    // コンテンツチェック（SPAサイトはメタ情報のみでも許容）
+    const minContentLength = scrapedContent.isSPA ? 50 : 100;
+    if (!scrapedContent.mainContent || scrapedContent.mainContent.length < minContentLength) {
+      const errorMessage = scrapedContent.isSPA
+        ? "このサイトはJavaScriptで動的に生成されるため、コンテンツを十分に取得できませんでした。静的なHTMLページをお試しください。"
+        : "ページからコンテンツを十分に取得できませんでした。";
       return {
         success: false,
-        error: "ページからコンテンツを十分に取得できませんでした",
+        error: errorMessage,
       };
     }
 
@@ -115,6 +123,7 @@ export async function diagnoseUrl(
         similarityPercentage,
         analysis,
         scrapedAt: new Date().toISOString(),
+        isSPA: scrapedContent.isSPA,
       },
     };
   } catch (error) {
