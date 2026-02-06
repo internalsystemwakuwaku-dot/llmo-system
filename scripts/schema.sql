@@ -2,7 +2,7 @@
 -- Vector拡張機能を使用
 
 -- analysis_logs テーブル
--- ベクトル次元: 768 (text-embedding-004 / gemini-embedding用)
+-- ベクトル次元: 1536 (OpenAI text-embedding-3-small用)
 CREATE TABLE IF NOT EXISTS analysis_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   url TEXT NOT NULL,
@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS analysis_logs (
   page_title TEXT,
   content_preview TEXT,
   similarity_score REAL,
-  content_embedding F32_BLOB(768),
-  query_embedding F32_BLOB(768),
+  content_embedding F32_BLOB(1536),
+  query_embedding F32_BLOB(1536),
   advice TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

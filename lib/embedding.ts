@@ -16,16 +16,16 @@ const EMBEDDING_CONFIG = {
   },
 };
 
-// 環境変数からプロバイダーを自動選択
+// 環境変数からプロバイダーを自動選択（OpenAIを優先）
 export function getEmbeddingProvider(): EmbeddingProvider {
-  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return "google";
-  }
   if (process.env.OPENAI_API_KEY) {
     return "openai";
   }
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return "google";
+  }
   throw new Error(
-    "No embedding provider configured. Set GOOGLE_GENERATIVE_AI_API_KEY or OPENAI_API_KEY"
+    "No embedding provider configured. Set OPENAI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY"
   );
 }
 
