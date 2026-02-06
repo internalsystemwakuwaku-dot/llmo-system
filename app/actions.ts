@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getTursoClient, cosineSimilarity, vectorToBase64 } from "@/lib/turso";
 import { embedText } from "@/lib/embedding";
 import { scrapeUrl, truncateContent } from "@/lib/scraper";
-import { analyzeContent, AnalysisResult } from "@/lib/analyzer";
+import { analyzeContentWithFallback, AnalysisResult } from "@/lib/analyzer";
 
 // 入力バリデーションスキーマ
 const analyzeInputSchema = z.object({
@@ -86,7 +86,7 @@ export async function diagnoseUrl(
 
     // 4. LLMによる詳細分析
     console.log("[LLMO] Analyzing content with LLM...");
-    const analysis = await analyzeContent(scrapedContent, targetQuery, similarityScore);
+    const analysis = await analyzeContentWithFallback(scrapedContent, targetQuery, similarityScore);
 
     // 5. 結果をデータベースに保存
     console.log("[LLMO] Saving to database...");
