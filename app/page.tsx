@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
 import { diagnoseUrl, DiagnosisResult } from "./actions";
 import {
   Search,
@@ -14,6 +14,86 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn, getScoreColor, getScoreBgColor, getScoreLabel } from "@/lib/utils";
+
+// 送信ボタンコンポーネント（useFormStatusを使用）
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className={cn(
+        "w-full py-3 px-4 rounded-lg font-medium text-white transition-colors flex items-center justify-center gap-2",
+        pending
+          ? "bg-gray-400 cursor-not-allowed"
+          : "bg-blue-600 hover:bg-blue-700"
+      )}
+    >
+      {pending ? (
+        <>
+          <Loader2 className="w-5 h-5 animate-spin" />
+          診断中...
+        </>
+      ) : (
+        <>
+          <Search className="w-5 h-5" />
+          診断を開始
+        </>
+      )}
+    </button>
+  );
+}
+
+// フォーム入力コンポーネント
+function FormInputs() {
+  const { pending } = useFormStatus();
+
+  return (
+    <>
+      {/* URL入力 */}
+      <div>
+        <label
+          htmlFor="url"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          診断したいURL
+        </label>
+        <input
+          type="url"
+          id="url"
+          name="url"
+          placeholder="https://example.com/page"
+          required
+          disabled={pending}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        />
+      </div>
+
+      {/* ターゲット質問 */}
+      <div>
+        <label
+          htmlFor="targetQuery"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          ターゲット質問文
+        </label>
+        <textarea
+          id="targetQuery"
+          name="targetQuery"
+          rows={3}
+          placeholder="例: 「Next.jsでApp Routerを使ったSSRの実装方法は？」"
+          required
+          disabled={pending}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          ユーザーがAIに質問しそうな内容を入力してください
+        </p>
+      </div>
+    </>
+  );
+}
 
 // スコア表示コンポーネント
 function ScoreCard({
@@ -197,7 +277,7 @@ function ResultDisplay({ result }: { result: DiagnosisResult }) {
 }
 
 export default function HomePage() {
-  const [result, formAction, isPending] = useActionState(diagnoseUrl, null);
+  const [result, formAction] = useFormState(diagnoseUrl, null);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -218,70 +298,8 @@ export default function HomePage() {
         {/* 入力フォーム */}
         <form action={formAction} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="space-y-4">
-            {/* URL入力 */}
-            <div>
-              <label
-                htmlFor="url"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                診断したいURL
-              </label>
-              <input
-                type="url"
-                id="url"
-                name="url"
-                placeholder="https://example.com/page"
-                required
-                disabled={isPending}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* ターゲット質問 */}
-            <div>
-              <label
-                htmlFor="targetQuery"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                ターゲット質問文
-              </label>
-              <textarea
-                id="targetQuery"
-                name="targetQuery"
-                rows={3}
-                placeholder="例: 「Next.jsでApp Routerを使ったSSRの実装方法は？」"
-                required
-                disabled={isPending}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed resize-none"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                ユーザーがAIに質問しそうな内容を入力してください
-              </p>
-            </div>
-
-            {/* 送信ボタン */}
-            <button
-              type="submit"
-              disabled={isPending}
-              className={cn(
-                "w-full py-3 px-4 rounded-lg font-medium text-white transition-colors flex items-center justify-center gap-2",
-                isPending
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
-              )}
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  診断中...
-                </>
-              ) : (
-                <>
-                  <Search className="w-5 h-5" />
-                  診断を開始
-                </>
-              )}
-            </button>
+            <FormInputs />
+            <SubmitButton />
           </div>
         </form>
 
