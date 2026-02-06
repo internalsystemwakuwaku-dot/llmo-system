@@ -12,7 +12,7 @@ async function setupDatabase() {
   console.log("🚀 Setting up Turso database...");
 
   try {
-    // analysis_logs テーブル作成 (1536次元 = OpenAI text-embedding-3-small)
+    // analysis_logs テーブル作成 (768次元 = Gemini embedding-001)
     await client.execute(`
       CREATE TABLE IF NOT EXISTS analysis_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,8 +21,8 @@ async function setupDatabase() {
         page_title TEXT,
         content_preview TEXT,
         similarity_score REAL,
-        content_embedding F32_BLOB(1536),
-        query_embedding F32_BLOB(1536),
+        content_embedding F32_BLOB(768),
+        query_embedding F32_BLOB(768),
         advice TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
